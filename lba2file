@@ -7,6 +7,8 @@
 
 # B9 May 2020
 
+# Bug fix Nov 08, 2023. shwsun
+
 if [[ "$1" == "-b" ]]; then
     BYTESFLAG=Byte
     shift
@@ -29,7 +31,8 @@ drive=${drive#/dev/}		# Remove /dev/ prefix, if any.
 
 if [[ "$drive" =~ ^(.*)[0-9]$ ]]; then    # Either user specified a partition.
     searchparts="/sys/class/block/$drive"
-    drive=${BASH_REMATCH[1]}
+    # NOTE(shwsun): this removes last number in device name
+    # drive=${BASH_REMATCH[1]}
 else				     # Or user specified a drive.
     shopt -s nullglob		     # Don't use '?' literally.
     searchparts=$(eval echo /sys/class/block/${drive}?)
@@ -38,7 +41,14 @@ fi
 for partition in $searchparts; do
     device=/dev/${partition#/sys/class/block/}
     cd "$partition" || continue
-    start=$(cat "$partition/start")
+    # NOTE(shwsun): for our nvme device we don't have start file, possibly
+    # because there is not offset
+    if ! [ -f /path/to/file ]; then
+        start=0
+    else
+        start=$(cat "$partition/start")
+    fi
+
     partitionsize=$(cat "$partition/size")
     hwsectorsize=$(cat "/sys/class/block/$drive/queue/hw_sector_size")
 
